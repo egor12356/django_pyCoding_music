@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
+from django.utils import timezone
+from django.conf import settings
 
 # Create your models here.
 
@@ -63,7 +65,7 @@ class Artist(models.Model):
         verbose_name_plural = 'Исполнители'
 
 
-class Artist(models.Model):
+class Album(models.Model):
     """Альбом исполнителя"""
     name = models.ForeignKey(Artist, on_delete=models.CASCADE, verbose_name='Исполнитель')
     name = models.CharField(max_length=255, verbose_name='Название альбома')
@@ -128,6 +130,88 @@ class Cart(models.Model):
     class Meta:
         verbose_name = 'Корзина'
         verbose_name_plural = 'Корзины'
+
+
+
+class Order(models.Model):
+    """Заказ пользователя"""
+
+    STATUS_NEW = 'new'
+    STATUS_IN_PROGRESS = 'in_progress'
+    STATUS_READY = 'is_ready'
+    STATUS_COMPLETED = 'completed'
+
+    BUYING_TYPE_SELF = 'self'
+    BUYING_TYPE_DELIVERY = 'delivery'
+
+    STATUS_CHOICES = (
+        (STATUS_NEW, 'Новый заказ'),
+        (STATUS_IN_PROGRESS, 'Заказ в обработке'),
+        (STATUS_READY, 'Заказ готов')
+        (STATUS_COMPLETED, 'Закза получен покупателем'),
+    )
+
+    BUYING_TYPE_CHOICES = (
+        (BUYING_TYPE_SELF, 'Самовывоз'),
+        (BUYING_TYPE_DELIVERY, 'Доставка'),
+    )
+
+    customer = models.ForeignKey('Customer', verbose_name='Покупатель', related_name='orders', on_delete=models.CASCADE)
+    first_name = models.ForeignKey(max_length=255, verbose_name='Имя')
+    last_name = models.ForeignKey(max_length=255, verbose_name='Фамилия')
+    phone = models.ForeignKey(max_length=20, verbose_name='Телефон')
+    cart = models.ForeignKey(Cart, verbose_name='Корзина', on_delete=models.CASCADE)
+    address = models.CharField(max_length=1024, verbose_name='Адрес', null=True, blank=True)
+    status = models.CharField(max_length=100, verbose_name='Статус заказа', choices=STATUS_CHOICES, default=STATUS_NEW)
+    buying_type = models.CharField(max_length=100, verbose_name='Тип заказа', choices=BUYING_TYPE_CHOICES)
+    comment = models.TextField(verbose_name='Комментарий к заказу', null=True, blank=True)
+    created_at = models.DateField(verbose_name='Дата создания заказа', auto_now=True)
+    order_date = models.DateField(verbose_name='Дата получения заказа', default=timezone.now)
+
+    def __str__(self):
+        return str(self.id)
+
+    class Meta:
+        verbose_name = 'Заказ'
+        verbose_name_plural = 'Заказы'
+
+
+class Customer(models.Model):
+    """Покупатель"""
+    user = models.OneToOneField(settings.AUTH_MODEL_USER, verbose_name='Пользователь', on_delete=models.CASCADE)
+    is_active = models.BooleanField(default=True, verbose_name='Активный?')
+    customer_orders = models.ManyToManyField(
+        Order, blank=True, verbose_name='Заказы покупателя', related_name='related)customer'
+    )
+    wishlist = models.ManyToManyField(Album, blank=True, verbose_name='Список ожидаемого')
+    phone = models.CharField(max_length=20)
+    address = models.TextField(null=True, blank=True, verbose_name='Адрес')
+
+
+    def __str__(self):
+        return str(self.user.username)
+
+    class Meta:
+        verbose_name = 'Пользователь'
+        verbose_name_plural = 'Пользователи'
+
+
+class Notification(models.Model):
+    """Уведомления"""
+    recipient = models.ForeignKey(Customer, on_delete=models.CASCADE, verbose_name='Пользователь')
+    text = models.TextField()
+    read = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f'Уведомление для {self.recipient.user.username} | id={self.id}'
+
+    class Meta:
+        verbose_name = 'Уведомление'
+        verbose_name_plural = 'Уведомления'
+
+
+
+
 
 
 
